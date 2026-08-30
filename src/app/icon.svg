@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1F1B17"/>
+      <stop offset="100%" stop-color="#14110E"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded Base Plate -->
+  <rect width="512" height="512" rx="108" fill="url(#bgGrad)"/>
+  <rect x="6" y="6" width="500" height="500" rx="102" fill="none" stroke="#38312A" stroke-width="6"/>
+
+  <!-- Serif Monogram L -->
+  <g fill="#F5EFEB">
+    <!-- Main Vertical Stem -->
+    <rect x="188" y="132" width="44" height="236"/>
+    <!-- Top Horizontal Serif -->
+    <path d="M152 132 H268 V152 H232 V152 H188 V152 H152 Z"/>
+    <!-- Bottom Base Serif Extension -->
+    <path d="M152 348 H208 V368 H152 Z"/>
+    <!-- Horizontal Foot -->
+    <path d="M188 332 H348 V368 H188 Z"/>
+    <!-- Right Terminal Upward Serif -->
+    <path d="M328 296 H348 V368 H328 Z"/>
+  </g>
+
+  <!-- Living Green Dot / Intention Focus Accent -->
+  <circle cx="338" cy="180" r="26" fill="#52734D"/>
+</svg>

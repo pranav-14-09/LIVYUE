@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --paper: #f5f2eb;
+  --paper-card: rgba(250, 248, 243, 0.78);
+  --paper-deep: #ede8de;
+  --paper-ink: #e2dbd0;
+  --ink: #1c1a17;
+  --ink-muted: #6d675f;
+  --moss: #3c4d39;
+  --ember: #af5139;
+  --rule: color-mix(in srgb, var(--ink) 7.5%, transparent);
+  --rule-strong: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+html.dark {
+  color-scheme: dark;
+  --paper: #161513;
+  --paper-card: rgba(29, 28, 25, 0.78);
+  --paper-deep: #24221f;
+  --paper-ink: #2d2a26;
+  --ink: #ede8e1;
+  --ink-muted: #9e978e;
+  --moss: #768e71;
+  --ember: #c8715e;
+  --rule: color-mix(in srgb, var(--ink) 9%, transparent);
+  --rule-strong: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-card: var(--paper-card);
+  --color-paper-deep: var(--paper-deep);
+  --color-paper-ink: var(--paper-ink);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-moss: var(--moss);
+  --color-ember: var(--ember);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), ui-serif, Georgia, serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+section[id] {
+  scroll-margin-top: 1.5rem;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--moss) 20%, var(--paper));
+  color: var(--ink);
+}
+
+/* Fine uniform paper micro-texture with zero white spots or glowing patches */
+.grain {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  transition: opacity 0.3s ease;
+}
+
+html.dark .grain {
+  opacity: 0.02;
+  mix-blend-mode: overlay;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .rise,
+  .rise-delay-1,
+  .rise-delay-2,
+  .rise-delay-3 {
+    animation: none;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.85rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 1s ease both;
+}
+
+.rise-delay-1 {
+  animation: rise 1s ease 0.12s both;
+}
+
+.rise-delay-2 {
+  animation: rise 1s ease 0.24s both;
+}
+
+.rise-delay-3 {
+  animation: rise 1s ease 0.4s both;
+}
