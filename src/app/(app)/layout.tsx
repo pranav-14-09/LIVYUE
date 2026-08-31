@@ -9,9 +9,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
       <footer className="border-t border-rule py-8 text-center text-xs text-ink-muted">
-        <p className="font-sans uppercase tracking-[0.24em] text-[0.7rem] font-medium text-ink-muted">
-          LIVYUE — LIVE YOURSELF EVERY DAY
-        </p>
+        <div className="space-y-1.5 flex flex-col items-center justify-center">
+          <p className="font-sans uppercase tracking-[0.24em] text-[0.7rem] font-medium text-ink-muted">
+            LIVYUE — LIVE YOURSELF EVERY DAY
+          </p>
+          <p className="font-sans uppercase tracking-[0.22em] text-[0.55rem] text-ink-muted/80 font-normal">
+            BY PRNV
+          </p>
+        </div>
       </footer>
     </div>
   );

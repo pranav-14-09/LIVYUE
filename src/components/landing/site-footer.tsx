@@ -11,16 +11,21 @@ export function SiteFooter() {
             A personal companion built with care to help you understand your behaviour and live intentionally.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-8">
           <Link
             href="/today"
             className="font-sans text-[0.7rem] uppercase tracking-[0.2em] text-ink hover:text-moss underline underline-offset-4"
           >
             Enter LIVYUE →
           </Link>
-          <p className="font-sans text-[0.7rem] uppercase tracking-[0.24em] text-ink-muted font-medium">
-            LIVYUE — LIVE YOURSELF EVERY DAY
-          </p>
+          <div className="space-y-1.5 flex flex-col items-center sm:items-end">
+            <p className="font-sans text-[0.7rem] uppercase tracking-[0.24em] text-ink-muted font-medium">
+              LIVYUE — LIVE YOURSELF EVERY DAY
+            </p>
+            <p className="font-sans text-[0.55rem] uppercase tracking-[0.22em] text-ink-muted/80 font-normal">
+              BY PRNV
+            </p>
+          </div>
         </div>
       </div>
     </footer>

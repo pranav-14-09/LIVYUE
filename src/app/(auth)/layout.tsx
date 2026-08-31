@@ -69,9 +69,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Footer Branding */}
-        <div className="pt-8 border-t border-rule/60 text-center text-xs text-ink-muted">
-          <p className="font-sans text-[0.68rem] uppercase tracking-[0.2em]">
+        <div className="pt-8 border-t border-rule/60 text-center text-xs text-ink-muted space-y-1.5 flex flex-col items-center justify-center">
+          <p className="font-sans text-[0.68rem] uppercase tracking-[0.2em] text-ink-muted font-medium">
             LIVYUE — LIVE YOURSELF EVERY DAY
+          </p>
+          <p className="font-sans text-[0.55rem] uppercase tracking-[0.22em] text-ink-muted/80 font-normal">
+            BY PRNV
           </p>
         </div>
       </div>
