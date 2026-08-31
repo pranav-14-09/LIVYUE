@@ -1,8 +1,8 @@
 -- ==============================================================================
--- LIVYUE — Multi-User Database Schema & PostgreSQL Row Level Security (RLS)
+-- LIVYUE — PostgreSQL Persistent Database Schema & Row Level Security (RLS)
 -- ==============================================================================
--- Run this SQL in your Supabase SQL Editor to initialize all tables, indexes, 
--- triggers, and Row Level Security policies.
+-- Run this SQL in your Supabase SQL Editor to initialize or update all tables,
+-- indexes, triggers, and Row Level Security policies.
 -- ==============================================================================
 
 -- 1. PROFILES (Extends auth.users)
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 2. USER SETTINGS
+-- 2. USER SETTINGS & ROUTINE PREFERENCES
 CREATE TABLE IF NOT EXISTS public.user_settings (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   user_name TEXT,
@@ -32,16 +32,16 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 3. DAY ENTRIES (Keyed by User ID and YYYY-MM-DD Date)
+-- 3. DAY ENTRIES (Core daily journal record)
 CREATE TABLE IF NOT EXISTS public.day_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  entry_date TEXT NOT NULL, -- YYYY-MM-DD local format
+  entry_date TEXT NOT NULL, -- YYYY-MM-DD format
   day_message TEXT DEFAULT '',
   morning_intention TEXT DEFAULT '',
   evening_reflection TEXT DEFAULT '',
   takeaways TEXT DEFAULT '',
-  energy_level TEXT, -- 'calm', 'clear', 'tired', 'heavy', 'scattered'
+  energy_level TEXT, -- 'calm' | 'clear' | 'tired' | 'heavy' | 'scattered'
   completed_evening BOOLEAN NOT NULL DEFAULT false,
   daily_score INTEGER NOT NULL DEFAULT 0,
   daily_insight JSONB,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS public.day_entries (
   CONSTRAINT unique_user_entry_date UNIQUE (user_id, entry_date)
 );
 
--- 4. DAILY INTENTIONS (Child records of day_entries)
+-- 4. DAILY INTENTIONS (Child intention items for a day)
 CREATE TABLE IF NOT EXISTS public.daily_intentions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   day_entry_id UUID NOT NULL REFERENCES public.day_entries(id) ON DELETE CASCADE,
@@ -58,21 +58,22 @@ CREATE TABLE IF NOT EXISTS public.daily_intentions (
   title TEXT NOT NULL,
   description TEXT,
   category TEXT NOT NULL DEFAULT 'personal',
-  status TEXT NOT NULL DEFAULT 'missed', -- 'done', 'partial', 'missed'
+  status TEXT NOT NULL DEFAULT 'missed', -- 'done' | 'partial' | 'missed'
   note TEXT DEFAULT '',
   order_index INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 5. INDEXES FOR PERFORMANCE
+-- 5. PERFORMANCE INDEXES
 CREATE INDEX IF NOT EXISTS idx_day_entries_user_date ON public.day_entries(user_id, entry_date DESC);
 CREATE INDEX IF NOT EXISTS idx_daily_intentions_entry ON public.daily_intentions(day_entry_id);
 CREATE INDEX IF NOT EXISTS idx_daily_intentions_user ON public.daily_intentions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_settings_user ON public.user_settings(user_id);
 
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
--- Every table has RLS enabled with strict checks enforcing auth.uid() = user_id.
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
@@ -81,70 +82,83 @@ ALTER TABLE public.daily_intentions ENABLE ROW LEVEL SECURITY;
 
 -- Profiles Policies
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
-CREATE POLICY "Users can view own profile" 
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
+CREATE POLICY "profiles_select_own" 
   ON public.profiles FOR SELECT 
   USING (auth.uid() = id);
 
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
-CREATE POLICY "Users can update own profile" 
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+CREATE POLICY "profiles_update_own" 
   ON public.profiles FOR UPDATE 
   USING (auth.uid() = id);
 
 -- User Settings Policies
 DROP POLICY IF EXISTS "Users can view own settings" ON public.user_settings;
-CREATE POLICY "Users can view own settings" 
+DROP POLICY IF EXISTS "settings_select_own" ON public.user_settings;
+CREATE POLICY "settings_select_own" 
   ON public.user_settings FOR SELECT 
   USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own settings" ON public.user_settings;
-CREATE POLICY "Users can insert own settings" 
+DROP POLICY IF EXISTS "settings_insert_own" ON public.user_settings;
+CREATE POLICY "settings_insert_own" 
   ON public.user_settings FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update own settings" ON public.user_settings;
-CREATE POLICY "Users can update own settings" 
+DROP POLICY IF EXISTS "settings_update_own" ON public.user_settings;
+CREATE POLICY "settings_update_own" 
   ON public.user_settings FOR UPDATE 
   USING (auth.uid() = user_id);
 
 -- Day Entries Policies
 DROP POLICY IF EXISTS "Users can view own day entries" ON public.day_entries;
-CREATE POLICY "Users can view own day entries" 
+DROP POLICY IF EXISTS "day_entries_select_own" ON public.day_entries;
+CREATE POLICY "day_entries_select_own" 
   ON public.day_entries FOR SELECT 
   USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own day entries" ON public.day_entries;
-CREATE POLICY "Users can insert own day entries" 
+DROP POLICY IF EXISTS "day_entries_insert_own" ON public.day_entries;
+CREATE POLICY "day_entries_insert_own" 
   ON public.day_entries FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update own day entries" ON public.day_entries;
-CREATE POLICY "Users can update own day entries" 
+DROP POLICY IF EXISTS "day_entries_update_own" ON public.day_entries;
+CREATE POLICY "day_entries_update_own" 
   ON public.day_entries FOR UPDATE 
   USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete own day entries" ON public.day_entries;
-CREATE POLICY "Users can delete own day entries" 
+DROP POLICY IF EXISTS "day_entries_delete_own" ON public.day_entries;
+CREATE POLICY "day_entries_delete_own" 
   ON public.day_entries FOR DELETE 
   USING (auth.uid() = user_id);
 
 -- Daily Intentions Policies
 DROP POLICY IF EXISTS "Users can view own daily intentions" ON public.daily_intentions;
-CREATE POLICY "Users can view own daily intentions" 
+DROP POLICY IF EXISTS "intentions_select_own" ON public.daily_intentions;
+CREATE POLICY "intentions_select_own" 
   ON public.daily_intentions FOR SELECT 
   USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can insert own daily intentions" ON public.daily_intentions;
-CREATE POLICY "Users can insert own daily intentions" 
+DROP POLICY IF EXISTS "intentions_insert_own" ON public.daily_intentions;
+CREATE POLICY "intentions_insert_own" 
   ON public.daily_intentions FOR INSERT 
   WITH CHECK (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can update own daily intentions" ON public.daily_intentions;
-CREATE POLICY "Users can update own daily intentions" 
+DROP POLICY IF EXISTS "intentions_update_own" ON public.daily_intentions;
+CREATE POLICY "intentions_update_own" 
   ON public.daily_intentions FOR UPDATE 
   USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Users can delete own daily intentions" ON public.daily_intentions;
-CREATE POLICY "Users can delete own daily intentions" 
+DROP POLICY IF EXISTS "intentions_delete_own" ON public.daily_intentions;
+CREATE POLICY "intentions_delete_own" 
   ON public.daily_intentions FOR DELETE 
   USING (auth.uid() = user_id);
 
@@ -175,7 +189,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to run whenever a new user signs up in auth.users
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

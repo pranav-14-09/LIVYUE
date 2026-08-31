@@ -71,7 +71,7 @@ export function formatShortDate(dateString: string): string {
   }
 }
 
-function createDefaultStore(): LivyueStoreData {
+export function createDefaultStore(): LivyueStoreData {
   return {
     version: 1,
     settings: {
@@ -89,14 +89,14 @@ function createDefaultStore(): LivyueStoreData {
       lastActiveDate: undefined,
     },
     intentions: [],
-    entries: {}, // Strictly empty on start - zero fake past records
+    entries: {},
   };
 }
 
 let currentStorageKey = "livyue_store_v1";
 let activeSelectedDate: string | null = null;
 
-// Single in-memory store reference guaranteeing stable snapshot references
+// In-memory store instance
 let storeInstance: LivyueStoreData = createDefaultStore();
 let isInitialized = false;
 const listeners = new Set<() => void>();
@@ -132,32 +132,32 @@ let lastDeletedDay: {
   entry: DayEntry;
 } | null = null;
 
-// Background Cloud Sync dispatchers
-function triggerCloudSync(entry: DayEntry) {
-  if (typeof window === "undefined") return;
-  import("../server/actions/entry-actions")
-    .then(({ syncDayEntryAction }) => {
-      syncDayEntryAction(entry).catch(() => {});
-    })
-    .catch(() => {});
+export function getLastDeletedIntention() {
+  return lastDeletedIntention;
 }
 
-function triggerCloudDeleteDay(date: string) {
-  if (typeof window === "undefined") return;
-  import("../server/actions/entry-actions")
-    .then(({ deleteDayAction }) => {
-      deleteDayAction(date).catch(() => {});
-    })
-    .catch(() => {});
+export function getLastDeletedDay() {
+  return lastDeletedDay;
 }
 
-function triggerCloudSettingsSync(settings: Partial<UserSettings>) {
-  if (typeof window === "undefined") return;
-  import("../server/actions/entry-actions")
-    .then(({ saveUserSettingsAction }) => {
-      saveUserSettingsAction(settings).catch(() => {});
-    })
-    .catch(() => {});
+export function clearLastDeletedIntention() {
+  lastDeletedIntention = null;
+}
+
+export function clearLastDeletedDay() {
+  lastDeletedDay = null;
+}
+
+export function setLastDeletedIntention(item: {
+  date: string;
+  intention: DailyIntentionInstance;
+  index: number;
+}) {
+  lastDeletedIntention = item;
+}
+
+export function setLastDeletedDay(item: { date: string; entry: DayEntry }) {
+  lastDeletedDay = item;
 }
 
 export function setUserStorageScope(userId: string | null): void {
@@ -183,8 +183,11 @@ export function setUserStorageScope(userId: string | null): void {
     }
   }
 
-  storeInstance = createDefaultStore();
-  notifyListeners();
+  // Only reset to empty if there was no existing memory
+  if (!userId) {
+    storeInstance = createDefaultStore();
+    notifyListeners();
+  }
 }
 
 function initClientStore() {
@@ -198,8 +201,6 @@ function initClientStore() {
         if (!Array.isArray(parsed.intentions)) {
           parsed.intentions = [];
         }
-
-        // Validate and migrate each entry
         for (const [key, entry] of Object.entries(parsed.entries)) {
           if (!entry.intentions || !Array.isArray(entry.intentions)) {
             const checkIns = entry.checkIns || [];
@@ -219,7 +220,6 @@ function initClientStore() {
         return;
       }
     }
-    localStorage.setItem(currentStorageKey, JSON.stringify(storeInstance));
   } catch (err) {
     console.error("Failed to initialize LIVYUE storage:", err);
   }
@@ -258,7 +258,7 @@ export function saveStore(data: LivyueStoreData): void {
     try {
       localStorage.setItem(currentStorageKey, JSON.stringify(data));
     } catch (err) {
-      console.error("Failed to save LIVYUE store:", err);
+      console.error("Failed to save LIVYUE store cache:", err);
     }
   }
   notifyListeners();
@@ -275,7 +275,7 @@ export function loadCloudStore(cloudData: LivyueStoreData): void {
     try {
       localStorage.setItem(currentStorageKey, JSON.stringify(storeInstance));
     } catch (err) {
-      console.error("Failed to save LIVYUE store:", err);
+      console.error("Failed to cache LIVYUE store:", err);
     }
   }
   notifyListeners();
@@ -340,7 +340,7 @@ export function getTodayEntry(
   return freshEntry;
 }
 
-// 1. MORNING OPERATIONS (Specific to target date)
+// 1. MORNING OPERATIONS
 export function addMorningIntention(
   date: string,
   item: { title: string; category: string; description?: string }
@@ -394,7 +394,6 @@ export function addMorningIntention(
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
   return newDailyInstance;
 }
 
@@ -446,7 +445,6 @@ export function updateMorningIntention(
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 export function deleteMorningIntention(date: string, intentionId: string): void {
@@ -491,7 +489,6 @@ export function deleteMorningIntention(date: string, intentionId: string): void 
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 export function undoDeleteIntention(): boolean {
@@ -540,7 +537,6 @@ export function undoDeleteIntention(): boolean {
 
   lastDeletedIntention = null;
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
   return true;
 }
 
@@ -567,7 +563,6 @@ export function saveDayMessage(date: string, message: string): void {
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 export function deleteDayMessage(date: string): void {
@@ -592,7 +587,6 @@ export function deleteDayMessage(date: string): void {
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 // 3. EVENING STATUS EVALUATION
@@ -652,7 +646,6 @@ export function updateEveningStatus(
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 export function updateEveningNote(
@@ -688,7 +681,6 @@ export function updateEveningNote(
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 // 4. EVENING REFLECTION & TAKEAWAYS
@@ -726,7 +718,6 @@ export function saveEveningReflection(
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 export function saveEveningTakeaways(date: string, takeaways: string): void {
@@ -751,7 +742,6 @@ export function saveEveningTakeaways(date: string, takeaways: string): void {
   };
 
   saveStore(updatedStore);
-  triggerCloudSync(updatedEntry);
 }
 
 // 5. HISTORY: DELETE DAY & UNDO
@@ -774,7 +764,6 @@ export function deleteDay(date: string): DayEntry | null {
   };
 
   saveStore(updatedStore);
-  triggerCloudDeleteDay(date);
   return targetEntry;
 }
 
@@ -794,7 +783,6 @@ export function undoDeleteDay(): boolean {
 
   lastDeletedDay = null;
   saveStore(updatedStore);
-  triggerCloudSync(entry);
   return true;
 }
 
@@ -875,7 +863,6 @@ export function updateSettings(partial: Partial<UserSettings>): void {
     settings: { ...store.settings, ...partial },
   };
   saveStore(updatedStore);
-  triggerCloudSettingsSync(partial);
 }
 
 export function checkReturningStatus(store: LivyueStoreData): {
@@ -926,23 +913,7 @@ export function importStoreFromJSON(jsonString: string): boolean {
 }
 
 export function clearAllData(): void {
-  const emptyStore: LivyueStoreData = {
-    version: 1,
-    settings: {
-      userName: "",
-      morningPromptText: "What is one thing that would make today feel well-lived?",
-      morningCheckInTime: "08:00",
-      eveningCheckInTime: "21:00",
-      startPage: "today",
-      showCompleted: true,
-      confirmBeforeDelete: true,
-      enableDailyInsights: true,
-      installedAt: new Date().toISOString(),
-      lastActiveDate: undefined,
-    },
-    intentions: [],
-    entries: {},
-  };
+  const emptyStore = createDefaultStore();
   lastDeletedIntention = null;
   lastDeletedDay = null;
   saveStore(emptyStore);
