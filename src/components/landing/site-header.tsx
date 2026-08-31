@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Wordmark } from "@/components/wordmark";
 import { ThemeSelector } from "@/lib/theme";
 
@@ -17,7 +16,7 @@ export function SiteHeader() {
         <a href="#top" className="shrink-0">
           <Wordmark size="lg" />
         </a>
-        <div className="flex items-center gap-3 sm:gap-6">
+        <div className="flex items-center gap-4 sm:gap-6 md:gap-8">
           <nav aria-label="Page" className="hidden sm:flex items-center gap-4 md:gap-8">
             {links.map((link) => (
               <a
@@ -30,12 +29,6 @@ export function SiteHeader() {
             ))}
           </nav>
           <ThemeSelector />
-          <Link
-            href="/today"
-            className="rounded border border-rule-strong bg-paper/80 px-3 py-1 font-sans text-[0.62rem] uppercase tracking-[0.18em] text-ink transition-colors hover:border-ink hover:bg-paper sm:text-[0.72rem]"
-          >
-            Enter Companion →
-          </Link>
         </div>
       </div>
     </header>
