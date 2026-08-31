@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useSyncExternalStore } from "react";
 
 export type ThemeMode = "light" | "dark";
 
@@ -8,6 +8,48 @@ interface ThemeContextType {
   theme: ThemeMode;
   setTheme: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+}
+
+let memoryTheme: ThemeMode = "light";
+const themeListeners = new Set<() => void>();
+
+function notifyThemeListeners() {
+  themeListeners.forEach((l) => l());
+}
+
+function subscribeTheme(callback: () => void) {
+  themeListeners.add(callback);
+  const onStorage = () => callback();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    themeListeners.delete(callback);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function getThemeClientSnapshot(): ThemeMode {
+  if (typeof window === "undefined") return "light";
+  try {
+    const stored = localStorage.getItem("livyue_theme") as ThemeMode | null;
+    if (stored === "dark" || stored === "light") return stored;
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  } catch {
+    return memoryTheme;
+  }
+}
+
+function getThemeServerSnapshot(): ThemeMode {
+  return "light";
+}
+
+const emptySubscribe = () => () => {};
+
+export function useMounted(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 }
 
 function applyThemeToDOM(mode: ThemeMode) {
@@ -35,41 +77,21 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    if (typeof window === "undefined") return "light";
-    try {
-      const stored = localStorage.getItem("livyue_theme") as ThemeMode | null;
-      if (stored === "dark" || stored === "light") return stored;
-      return document.documentElement.classList.contains("dark") ? "dark" : "light";
-    } catch {
-      return "light";
-    }
-  });
-
-  useEffect(() => {
-    applyThemeToDOM(theme);
-    const syncTheme = () => {
-      try {
-        const stored = localStorage.getItem("livyue_theme") as ThemeMode | null;
-        if (stored === "dark" || stored === "light") {
-          setThemeState(stored);
-          applyThemeToDOM(stored);
-        }
-      } catch {
-        // Ignore
-      }
-    };
-    window.addEventListener("storage", syncTheme);
-    return () => window.removeEventListener("storage", syncTheme);
-  }, [theme]);
+  const theme = useSyncExternalStore(
+    subscribeTheme,
+    getThemeClientSnapshot,
+    getThemeServerSnapshot
+  );
 
   const setTheme = (mode: ThemeMode) => {
-    setThemeState(mode);
+    memoryTheme = mode;
     applyThemeToDOM(mode);
+    notifyThemeListeners();
   };
 
   const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
+    const current = getThemeClientSnapshot();
+    const next = current === "dark" ? "light" : "dark";
     setTheme(next);
   };
 
@@ -129,19 +151,24 @@ export function MoonIcon({ className = "w-3.5 h-3.5" }: { className?: string }) 
  * Premium single circular theme button:
  * - In Light mode: Shows Moon icon (switches to dark)
  * - In Dark mode: Shows Sun icon (switches to light)
+ * - useMounted ensures deterministic initial SSR render with zero hydration mismatch
  */
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { theme, toggleTheme } = useTheme();
+  const mounted = useMounted();
+
+  const isDark = mounted && theme === "dark";
+  const label = isDark ? "Switch to light mode" : "Switch to dark mode";
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={label}
+      title={label}
       className={`relative inline-flex items-center justify-center w-8 h-8 rounded-full border border-rule bg-paper/60 hover:bg-paper-deep text-ink transition-all duration-300 cursor-pointer shadow-xs focus:outline-none focus:ring-1 focus:ring-ink/20 ${className}`}
     >
-      {theme === "dark" ? (
+      {isDark ? (
         <SunIcon className="w-3.5 h-3.5 text-ink transition-transform duration-300" />
       ) : (
         <MoonIcon className="w-3.5 h-3.5 text-ink transition-transform duration-300" />

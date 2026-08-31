@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { instrumentSans, instrumentSerif } from "@/lib/fonts";
 import { ThemeProvider } from "@/lib/theme";
 import "./globals.css";
@@ -50,6 +51,28 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
+const themeInitializerScript = `(function() {
+  try {
+    var theme = localStorage.getItem('livyue_theme');
+    if (!theme) {
+      var raw = localStorage.getItem('livyue_store_v1');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.settings && parsed.settings.themeMode) {
+          theme = parsed.settings.themeMode;
+        }
+      }
+    }
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+  } catch (e) {}
+})();`;
+
 export default function RootLayout({
   children,
 }: {
@@ -61,34 +84,12 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${instrumentSans.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function() {
-              try {
-                var theme = localStorage.getItem('livyue_theme');
-                if (!theme) {
-                  var raw = localStorage.getItem('livyue_store_v1');
-                  if (raw) {
-                    var parsed = JSON.parse(raw);
-                    if (parsed && parsed.settings && parsed.settings.themeMode) {
-                      theme = parsed.settings.themeMode;
-                    }
-                  }
-                }
-                if (theme === 'dark') {
-                  document.documentElement.classList.add('dark');
-                  document.documentElement.style.colorScheme = 'dark';
-                } else {
-                  document.documentElement.classList.remove('dark');
-                  document.documentElement.style.colorScheme = 'light';
-                }
-              } catch (e) {}
-            })();`,
-          }}
-        />
-      </head>
       <body className="min-h-full bg-paper font-sans text-ink">
+        <Script
+          id="theme-initializer"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitializerScript }}
+        />
         <ThemeProvider>
           <div className="grain" aria-hidden />
           {children}
